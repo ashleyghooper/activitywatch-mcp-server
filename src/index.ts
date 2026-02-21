@@ -6,6 +6,7 @@ import { activitywatch_run_query_tool } from "./query.js";
 import { activitywatch_get_events_tool } from "./rawEvents.js";
 import { activitywatch_query_examples_tool } from "./queryExamples.js";
 import { activitywatch_get_settings_tool } from "./getSettings.js";
+import { AW_API_BASE } from "./config.js";
 
 // Helper function to handle type-safe tool responses
 const makeSafeToolResponse = (handler: Function) => async (...args: any[]) => {
@@ -74,7 +75,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
   // Default empty object if arguments is undefined
   let args = request.params.arguments || {};
-  
+
   if (request.params.name === activitywatch_list_buckets_tool.name) {
     // Cast to the expected type for the bucket list tool
     return makeSafeToolResponse(activitywatch_list_buckets_tool.handler)({
@@ -85,16 +86,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
     return makeSafeToolResponse(activitywatch_query_examples_tool.handler)();
   } else if (request.params.name === activitywatch_run_query_tool.name) {
     // For the query tool, we need to validate and normalize the args
-    
+
     // First, log the raw arguments to debug format issues
     console.error(`\nRAW ARGS FROM MCP CLIENT:`);
     console.error(JSON.stringify(request.params.arguments, null, 2));
     console.error(`\nTYPE: ${typeof request.params.arguments}`);
     console.error(`\nARRAY? ${Array.isArray(request.params.arguments)}`);
-    
+
     // Make a mutable copy of the arguments
     let queryArgs = {...(request.params.arguments || {})};
-    
+
     // Try to see if this is JSON string that needs parsing
     if (typeof request.params.arguments === 'string') {
       try {
@@ -106,19 +107,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         console.error(`Failed to parse arguments string: ${e}`);
       }
     }
-    
+
     // More diagnostic info
     if (queryArgs.query) {
       console.error(`Query type: ${typeof queryArgs.query}`);
       console.error(`Query array? ${Array.isArray(queryArgs.query)}`);
       console.error(`Query value: ${JSON.stringify(queryArgs.query, null, 2)}`);
-      
+
       if (Array.isArray(queryArgs.query) && queryArgs.query.length > 0) {
         console.error(`First item type: ${typeof queryArgs.query[0]}`);
         console.error(`First item array? ${Array.isArray(queryArgs.query[0])}`);
       }
     }
-    
+
     // Validate timeperiods
     if (!queryArgs.timeperiods) {
       return makeSafeToolResponse(() => ({
@@ -129,7 +130,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         isError: true
       }))();
     }
-    
+
     if (!Array.isArray(queryArgs.timeperiods)) {
       // Try to normalize a single string to an array
       if (typeof queryArgs.timeperiods === 'string') {
@@ -145,7 +146,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         }))();
       }
     }
-    
+
     // Validate query
     if (!queryArgs.query) {
       return makeSafeToolResponse(() => ({
@@ -156,7 +157,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         isError: true
       }))();
     }
-    
+
     // Handle different query formats
     if (!Array.isArray(queryArgs.query)) {
       // If it's a string, wrap it in an array
@@ -167,14 +168,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         return makeSafeToolResponse(() => formatValidationError())();
       }
     }
-    
+
     // Check for double-wrapped array format (an issue with some MCP clients)
     if (Array.isArray(queryArgs.query) && queryArgs.query.length === 1 && Array.isArray(queryArgs.query[0])) {
       // Extract the inner array
       const innerArray = queryArgs.query[0];
       console.error(`Detected double-wrapped query array from MCP client. Unwrapping...`);
       console.error(`Original: ${JSON.stringify(queryArgs.query)}`);
-      
+
       if (Array.isArray(innerArray) && innerArray.length >= 1) {
         // If the inner array is itself an array, take its first element
         if (Array.isArray(innerArray[0])) {
@@ -186,14 +187,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         console.error(`Unwrapped: ${JSON.stringify(queryArgs.query)}`);
       }
     }
-    
+
     // Special case: Check if we received an array of query lines that need to be combined
     if (Array.isArray(queryArgs.query) && queryArgs.query.length > 1) {
       // Check if they look like separate query statements
-      const areQueryStatements = queryArgs.query.some(q => 
+      const areQueryStatements = queryArgs.query.some(q =>
         typeof q === 'string' && (q.includes('=') || q.trim().endsWith(';'))
       );
-      
+
       if (areQueryStatements) {
         // Join them into a single query string
         const combinedQuery = queryArgs.query.join(' ');
@@ -201,16 +202,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         console.error(`Combined multiple query statements into a single string: ${combinedQuery}`);
       }
     }
-    
+
     // Log the processed query
     console.error(`Processed query for execution: ${JSON.stringify({timeperiods: queryArgs.timeperiods, query: queryArgs.query})}`);
-    
+
     return makeSafeToolResponse(activitywatch_run_query_tool.handler)({
       timeperiods: queryArgs.timeperiods as string[],
       query: queryArgs.query as string[],
       name: typeof queryArgs.name === 'string' ? queryArgs.name : undefined
     });
-    
+
     // Helper function to return a nicely formatted validation error
     function formatValidationError() {
       return {
@@ -237,8 +238,8 @@ COMMON ERRORS:
 - Double-wrapping the query in nested arrays (some MCP clients may do this)
 
 DEBUGGING TIP:
-If you're working with an MCP client that consistently produces errors, try examining the exact format 
-of the query parameter it sends. The server tries to automatically detect and handle various formats, 
+If you're working with an MCP client that consistently produces errors, try examining the exact format
+of the query parameter it sends. The server tries to automatically detect and handle various formats,
 but may need additional configuration.
 `
         }],
@@ -256,7 +257,7 @@ but may need additional configuration.
         isError: true
       }))();
     }
-    
+
     return makeSafeToolResponse(activitywatch_get_events_tool.handler)({
       bucketId: args.bucketId,
       limit: typeof args.limit === 'number' ? args.limit : undefined,
@@ -269,7 +270,7 @@ but may need additional configuration.
       key: typeof args.key === 'string' ? args.key : undefined
     });
   }
-  
+
   // Always return a properly formatted and type-safe response
   return makeSafeToolResponse(() => ({
     content: [{
@@ -285,7 +286,7 @@ async function main() {
   console.error("ActivityWatch MCP Server");
   console.error("=======================");
   console.error("Version: 1.1.0");
-  console.error("API Endpoint: http://localhost:5600/api/0");
+  console.error(`API Endpoint: ${AW_API_BASE}`);
   console.error("Tools: activitywatch_list_buckets, activitywatch_query_examples, activitywatch_run_query, activitywatch_get_events, activitywatch_get_settings");
   console.error("=======================");
   console.error("For help with query format, use the 'activitywatch_query_examples' tool first");
@@ -298,7 +299,7 @@ async function main() {
   console.error("the statements should NOT be split into separate array elements.");
   console.error("NOTE: Some MCP clients may wrap the query in an additional array. The server attempts to detect");
   console.error("and handle this automatically but may produce confusing error messages if detection fails.");
-  
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("ActivityWatch MCP Server running on stdio");
