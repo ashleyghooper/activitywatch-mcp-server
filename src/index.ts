@@ -8,6 +8,12 @@ import { activitywatch_query_examples_tool } from "./queryExamples.js";
 import { activitywatch_get_settings_tool } from "./getSettings.js";
 import { AW_API_BASE } from "./config.js";
 
+// Populate the VERSION constant from package.json
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const packageJson = require('../package.json');
+const VERSION = packageJson.version;
+
 // Helper function to handle type-safe tool responses
 const makeSafeToolResponse = (handler: Function) => async (...args: any[]) => {
   try {
@@ -31,7 +37,7 @@ const makeSafeToolResponse = (handler: Function) => async (...args: any[]) => {
 // Create server instance
 const server = new Server({
   name: "activitywatch-server",
-  version: "1.1.0"
+  version: VERSION
 }, {
   capabilities: {
     tools: {}
@@ -285,7 +291,7 @@ async function main() {
   // Output application banner
   console.error("ActivityWatch MCP Server");
   console.error("=======================");
-  console.error("Version: 1.1.0");
+  console.error(`Version: ${VERSION}`);
   console.error(`API Endpoint: ${AW_API_BASE}`);
   console.error("Tools: activitywatch_list_buckets, activitywatch_query_examples, activitywatch_run_query, activitywatch_get_events, activitywatch_get_settings");
   console.error("=======================");

@@ -94,13 +94,21 @@ npm install activitywatch-mcp-server
 
 1. Look for the MCP icon in Claude's interface to confirm it's working
 
-### Using with podman and Gemini CLI
+### Using a rootless podman container on Linux with Gemini CLI
+
+Make sure to build the image first with:
+
+```sh
+version=$(npm pkg get version | tr -d '"')
+podman build . -t activitywatch-mcp-server:${version}
+```
 
 This example uses the override for Activity Watch not being available on
 `127.0.0.1` (see next section). If not required, you may omit the `AW_API_BASE`
 environment variable.
 
 ```json
+{
   "mcpServers": {
     "activitywatch-mcp-server": {
       "command": "/usr/bin/podman",
@@ -111,13 +119,14 @@ environment variable.
         "--userns=keep-id",
         "-e",
         "AW_API_BASE",
-        "localhost/activitywatch-mcp-server:1.1.0"
+        "localhost/activitywatch-mcp-server:1.2.1"
       ],
       "env": {
         "AW_API_BASE": "http://mydesktop.local:5600/api/0"
-      },
+      }
     }
   }
+}
 ```
 
 ### Override ActivityWatch server host/port
@@ -125,11 +134,15 @@ environment variable.
 If you want to run this MCP server from inside Windows Subsystem for Linux,
 for instance within a container, the AW server running in Windows will not be
 available at `127.0.0.1`. To override the standard localhost connection, use the
-environment variable `AW_API_BASE`, as below:
+environment variable `AW_API_BASE` or the `--aw-api-base` flag, as below:
 
 ```sh
+# Using environment variable
 export AW_API_BASE=http://mydesktop.local:5600/api/0
 node dist/index.js
+
+# Or using command-line flag
+node dist/index.js --aw-api-base=http://mydesktop.local:5600/api/0
 ```
 
 NOTE: The AW server may be fussy about the name used to connect to it, but it
@@ -246,7 +259,7 @@ section above.
 
 If ActivityWatch isn't running, the server will show connection errors. Make
 sure ActivityWatch is running and accessible at the specified host/port
-addresss (`http://localhost:5600` unless you have overridden it).
+address (`http://localhost:5600` unless you have overridden it).
 
 ### Query Errors
 
@@ -320,4 +333,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 [MIT](LICENSE)
-
